@@ -17,11 +17,34 @@ trusting either model alone:
   positions. Every finding is tagged `[both]`, `[claude]`, `[codex]`, or
   `[disputed]`.
 
-Why bother? Two different models trained by two different labs make
-*different* mistakes. In practice the merge step catches real bugs that
-either reviewer alone waves through — and the forced "verify before you
-relay / concede or defend" rules stop one model from rubber-stamping the
-other's hallucinations.
+## Why this exists
+
+Every AI coding agent has the same failure mode: **it reviews its own work
+with the same blind spots it wrote it with.** A model that misread your
+codebase while planning will misread it the same way while reviewing — and
+it will sound just as confident both times. Self-testing is not review. We
+learned this the hard way: changes that passed the authoring model's own
+checks still shipped with real bugs that only an independent reviewer
+caught.
+
+The cheapest genuinely independent reviewer available is **a frontier model
+from a different lab**. Claude and Codex are trained on different data with
+different methods; they make *different* mistakes. That difference is the
+product:
+
+- **Agreement is signal.** When two unrelated models flag the same line,
+  it's almost always a real bug — triage those first.
+- **Disagreement is a map.** Findings only one model raises tell you exactly
+  where human judgment is needed, instead of drowning you in one model's
+  confident guesses.
+- **Adversarial rules prevent rubber-stamping.** Every cross-model finding
+  must be verified against the actual code before it reaches you; rejected
+  findings get a concede-or-defend round; unresolved disputes surface to you
+  with both positions rather than being papered over. Neither model gets to
+  hallucinate unchallenged, and neither gets to wave the other through.
+
+The result: fewer bugs reach your main branch, and the review you read is
+pre-triaged by confidence instead of being one long unweighted list.
 
 ## Prerequisites
 
@@ -33,6 +56,9 @@ Both are needed; the whole point is two independent vendors.
 
 ## Install
 
+Pick ONE of the two options — installing both registers duplicate skill
+names, and the stale copy can shadow the auto-updating plugin.
+
 **Option A — as a plugin (recommended):** in Claude Code, run
 
 ```
@@ -40,17 +66,23 @@ Both are needed; the whole point is two independent vendors.
 /plugin install dual-ai@dual-ai-skills
 ```
 
-**Option B — plain copy:**
+Plugin-installed skills are namespaced: invoke them as `/dual-ai:dual-plan`
+and `/dual-ai:dual-review`. (If they don't show up immediately, restart
+Claude Code.)
+
+**Option B — plain copy** (skills appear unnamespaced as `/dual-plan` and
+`/dual-review`):
 
 ```bash
 git clone https://github.com/SameerKhan/dual-ai-skills
+mkdir -p ~/.claude/skills
 cp -r dual-ai-skills/plugins/dual-ai/skills/* ~/.claude/skills/
 ```
 
 (Or into a repo's `.claude/skills/` to share it with just that team/project.)
 
-Then just say **"dual plan this feature"** or **"dual review this branch"**
-in Claude Code.
+Either way, you can also just say **"dual plan this feature"** or
+**"dual review this branch"** in Claude Code — no slash command needed.
 
 ## Not on Claude Code? (Cursor, Antigravity, etc.)
 
@@ -72,7 +104,9 @@ Two options:
   confident-sounding but shallow reviews.
 - **Never let both models write to the same working tree.** One drives, the
   other critiques. The optional co-coder mode in `/dual-plan` uses an
-  isolated `git worktree` for exactly this reason.
+  isolated `git worktree` for exactly this reason — and critique/review runs
+  always pass `-s read-only` explicitly rather than trusting the user's
+  sandbox default.
 - **Cap the argument loops** (3 rounds for plans, 1 rebuttal for reviews).
   Two LLMs will trade nits forever if you let them.
 - **Keep an `AGENTS.md` in your repos** (Codex reads it automatically). A

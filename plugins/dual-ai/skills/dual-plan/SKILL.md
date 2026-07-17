@@ -15,19 +15,25 @@ agree with it.
 1. **Scope the feature.** Explore the codebase as usual (respect the repo's
    CLAUDE.md conventions and known landmines). Draft an implementation plan:
    goal, files to touch, approach, data-shape changes, risks, test plan.
-   Write it to a scratchpad file, e.g. `plan.md`.
+   Write it to a scratchpad file OUTSIDE the repo (e.g. `/tmp/plan.md`) —
+   scratch files inside the repo would pollute the later `--uncommitted`
+   review scope or get committed by accident.
 
 2. **Codex critique gate.** Build a critique prompt file containing the plan
    plus instructions, then run Codex read-only in the background (takes
    minutes):
 
    ```bash
-   codex exec -c model_reasoning_effort="high" - < critique-prompt.md
+   codex exec -s read-only -c model_reasoning_effort="high" - < /tmp/critique-prompt.md
    ```
+
+   Pass `-s read-only` explicitly — the user's config may default to a
+   write-enabled sandbox, and the critic must never touch the tree.
 
    Critique prompt template:
    > You are reviewing an implementation plan for this repository (read the
-   > code to check every claim; AGENTS.md has project context). Do NOT
+   > code to check every claim; AGENTS.md — or CLAUDE.md if there is no
+   > AGENTS.md — has project context, when present). Do NOT
    > implement anything. Find: (1) factually wrong assumptions about the
    > codebase, (2) missed files, call sites, or cross-repo blast radius,
    > (3) simpler alternatives, (4) risks/edge cases the plan ignores,
@@ -71,20 +77,26 @@ piece itself in an ISOLATED git worktree:
 
 ```bash
 git worktree add /tmp/codex-<feature> HEAD
-cd /tmp/codex-<feature> && codex exec --full-auto "<subtask spec>"
+cd /tmp/codex-<feature> && codex exec --sandbox workspace-write "<subtask spec>"
 ```
 
-Then Claude reviews Codex's diff, cherry-picks/merges it into the main
-branch, and /dual-review still gates the combined result. Never point
-`--full-auto` at the user's primary working tree.
+Then Claude reviews Codex's working-tree diff in the worktree, applies and
+commits the accepted changes onto the main branch, and /dual-review still
+gates the combined result. Never point a write-enabled Codex at the user's
+primary working tree.
 
 ## Notes
 
 - Same plumbing as /dual-review: OpenAI Codex CLI installed + authenticated;
   don't edit the user's `~/.codex/config.toml` — always override reasoning
-  effort to `high` via `-c`.
-- `codex exec` defaults to a read-only sandbox — correct for the critique
-  gate. Only the explicit co-coder flow uses `--full-auto`, and only in a
-  worktree.
+  effort to `high` via `-c`, and check which model the config pins (a mini
+  model gives shallow critiques; override via `-c model=...` if needed).
+  macOS + Codex desktop app: if `codex` is symlinked out of
+  `/Applications/Codex.app`, its sibling helper `codex-code-mode-host` must
+  be symlinked into the same directory too, or every run fails with "failed
+  to spawn code-mode host" — recreate both symlinks if you hit that.
+- Always pass `-s read-only` on critique runs — don't rely on the sandbox
+  default, which the user's config can change. Only the explicit co-coder
+  flow uses `--sandbox workspace-write`, and only in a worktree.
 - Run Codex calls via Bash `run_in_background: true`; do other work while
   waiting.

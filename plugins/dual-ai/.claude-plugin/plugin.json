@@ -1,7 +1,7 @@
 {
   "name": "dual-ai",
   "description": "Dual-model workflows for Claude Code: /dual-plan (Claude drafts, Codex critiques until convergence) and /dual-review (Claude + Codex review the same diff, merged into one adversarially-verified report).",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Sameer Ahmed Khan"
   }

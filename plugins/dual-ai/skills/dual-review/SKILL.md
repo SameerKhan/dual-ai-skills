@@ -14,21 +14,29 @@ disagreement tells the user where to look manually.
 1. **Determine diff scope.**
    - Branch has commits vs the main branch (check the repo's CLAUDE.md for
      which branch is the trunk — it is not always `main`): scope =
-     `origin/<main>...HEAD`, Codex flag = `--base <main>`.
+     `<trunk>...HEAD`, Codex flag = `--base <trunk>`. Run `git fetch` first
+     and give both reviewers the SAME ref — a stale local trunk vs
+     `origin/<trunk>` silently produces two different diffs.
    - Only uncommitted working-tree changes: Codex flag = `--uncommitted`,
      and review the working-tree diff on the Claude side.
+   - Both committed AND uncommitted changes: `--base` and `--uncommitted`
+     are mutually exclusive, so don't pick silently — ask the user to
+     commit/stash first, or review the committed scope and state explicitly
+     that uncommitted edits are excluded.
 
 2. **Start the Codex review in the background** (it takes several minutes):
 
    ```bash
-   codex exec review --base main -c model_reasoning_effort="high"
-   # or: codex exec review --uncommitted -c model_reasoning_effort="high"
+   codex exec -s read-only review --base <trunk> -c model_reasoning_effort="high"
+   # or: codex exec -s read-only review --uncommitted -c model_reasoning_effort="high"
    ```
 
-   Run via Bash with `run_in_background: true`. Always override reasoning
-   effort to `high` — a low default in the user's `~/.codex/config.toml` is
-   too weak for review. If the sandbox blocks Codex's network access, retry
-   with the sandbox disabled.
+   Run via Bash with `run_in_background: true`. Always pass
+   `-s read-only` — the user's `~/.codex/config.toml` may default to a
+   write-enabled sandbox, and a reviewer must never touch the tree. Always
+   override reasoning effort to `high` — a low default is too weak for
+   review. If the sandbox blocks network access, grant network to the
+   sandboxed run; never disable the sandbox for a review.
 
 3. **While Codex runs, invoke `/code-review` at high effort** on the same scope.
 
@@ -60,11 +68,16 @@ disagreement tells the user where to look manually.
 - Requires the OpenAI Codex CLI (`codex`) installed and authenticated
   (`codex login`). Don't change the user's global `~/.codex/config.toml`;
   use `-c` overrides only.
+- Check which model `~/.codex/config.toml` pins. Effort `high` on a
+  small/mini model still yields a shallow reviewer — and the merge logic
+  would then treat "Codex found nothing" as an independent signal. If a mini
+  model is pinned, override it for the review via `-c model=...`.
 - macOS + Codex desktop app: if `codex` is a symlink into
   `/Applications/Codex.app`, the sibling helper `codex-code-mode-host` must
   be symlinked into the same directory too — codex resolves that helper next
   to the invoked binary, and without it every run fails with "failed to
-  spawn code-mode host" and returns a useless provisional verdict.
+  spawn code-mode host" and returns a useless provisional verdict. If you
+  hit that error, recreate both symlinks and re-run.
 - Codex reads `AGENTS.md` for project context automatically. If the repo
   only has a CLAUDE.md, consider keeping an `AGENTS.md` copy so both models
   see the same ground rules.
