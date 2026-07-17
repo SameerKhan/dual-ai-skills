@@ -1,0 +1,13 @@
+{
+  "name": "dual-ai-skills",
+  "owner": {
+    "name": "Sameer Ahmed Khan"
+  },
+  "plugins": [
+    {
+      "name": "dual-ai",
+      "source": "./plugins/dual-ai",
+      "description": "Two-model adversarial planning and code review: Claude Code + OpenAI Codex CLI working as independent critics on the same plan or diff."
+    }
+  ]
+}
