@@ -36,14 +36,14 @@ Both are needed; the whole point is two independent vendors.
 **Option A — as a plugin (recommended):** in Claude Code, run
 
 ```
-/plugin marketplace add YOUR_GITHUB_USER/dual-ai-skills
+/plugin marketplace add SameerKhan/dual-ai-skills
 /plugin install dual-ai@dual-ai-skills
 ```
 
 **Option B — plain copy:**
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USER/dual-ai-skills
+git clone https://github.com/SameerKhan/dual-ai-skills
 cp -r dual-ai-skills/plugins/dual-ai/skills/* ~/.claude/skills/
 ```
 
