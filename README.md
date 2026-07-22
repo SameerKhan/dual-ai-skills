@@ -19,8 +19,9 @@ on the same work, instead of trusting any one model alone:
 - **`/tri-review`** — same idea with a **third independent reviewer**:
   Claude's `/code-review`, `codex exec review`, and Gemini (via Google's
   Antigravity CLI, `agy`) all review the same diff in parallel. Findings are
-  ranked by cross-model agreement — all three > two > one — and single-model
-  findings are verified against the code before being reported. Tags:
+  ranked by cross-model agreement — all three > two > one — and Codex-only /
+  Gemini-only findings are verified against the code before being reported.
+  Tags:
   `[all]`, `[claude+codex]`, `[claude+gemini]`, `[codex+gemini]`,
   `[claude]`, `[codex]`, `[gemini]`, `[disputed]`.
 
@@ -116,8 +117,10 @@ Two options:
 - **Never let both models write to the same working tree.** One drives, the
   other critiques. The optional co-coder mode in `/dual-plan` uses an
   isolated `git worktree` for exactly this reason — and critique/review runs
-  always pass `-s read-only` explicitly rather than trusting the user's
-  sandbox default.
+  always pass an explicit sandbox flag (`-s read-only` for Codex,
+  `--sandbox` for Gemini) rather than trusting the user's defaults. The
+  diff under review is untrusted input; prompt-level "don't run commands"
+  text is not a boundary.
 - **Cap the argument loops** (3 rounds for plans, 1 rebuttal for reviews).
   Two LLMs will trade nits forever if you let them.
 - **Keep an `AGENTS.md` in your repos** (Codex reads it automatically). A

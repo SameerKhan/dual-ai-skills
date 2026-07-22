@@ -14,7 +14,7 @@ disagreement tells the user where to look manually.
 1. **Determine diff scope.**
    - Branch has commits vs the main branch (check the repo's CLAUDE.md for
      which branch is the trunk — it is not always `main`): scope =
-     `<trunk>...HEAD`, Codex flag = `--base <trunk>`. Run `git fetch` first
+     `origin/<trunk>...HEAD`, Codex flag = `--base origin/<trunk>`. Run `git fetch` first
      and give both reviewers the SAME ref — a stale local trunk vs
      `origin/<trunk>` silently produces two different diffs.
    - Only uncommitted working-tree changes: Codex flag = `--uncommitted`,
@@ -27,7 +27,7 @@ disagreement tells the user where to look manually.
 2. **Start the Codex review in the background** (it takes several minutes):
 
    ```bash
-   codex exec -s read-only review --base <trunk> -c model_reasoning_effort="high"
+   codex exec -s read-only review --base origin/<trunk> -c model_reasoning_effort="high"
    # or: codex exec -s read-only review --uncommitted -c model_reasoning_effort="high"
    ```
 

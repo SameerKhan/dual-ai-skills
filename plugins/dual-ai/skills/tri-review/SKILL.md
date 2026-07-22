@@ -14,11 +14,15 @@ finding is real; disagreement tells the user exactly where to look manually.
 1. **Determine diff scope.**
    - Branch has commits vs the main branch (check the repo's CLAUDE.md for
      which branch is the trunk — it is not always `main`): scope =
-     `<trunk>...HEAD`, Codex flag = `--base <trunk>`. Run `git fetch` first
-     and give all three reviewers the SAME ref — a stale local trunk vs
-     `origin/<trunk>` silently produces different diffs.
+     `origin/<trunk>...HEAD`, Codex flag = `--base origin/<trunk>`. Run
+     `git fetch` first and give all three reviewers the SAME ref — a stale
+     local trunk vs `origin/<trunk>` silently produces different diffs.
    - Only uncommitted working-tree changes: Codex flag = `--uncommitted`,
-     and review the working-tree diff on the Claude and Gemini sides.
+     and review the working-tree diff on the Claude and Gemini sides. Run
+     `git add --intent-to-add .` first so newly created untracked files
+     appear in `git diff HEAD` — otherwise two of the three reviewers
+     silently never see them. (Undo afterwards with `git reset` if the user
+     doesn't want them staged.)
    - Both committed AND uncommitted changes: `--base` and `--uncommitted`
      are mutually exclusive, so don't pick silently — ask the user to
      commit/stash first, or review the committed scope and state explicitly
@@ -27,25 +31,33 @@ finding is real; disagreement tells the user exactly where to look manually.
 2. **Write the diff to a patch file** (Gemini needs it — see Notes):
 
    ```bash
-   git diff origin/<trunk>...HEAD > /tmp/tri-review.patch
-   # or: git diff HEAD > ... for uncommitted scope
+   PATCH=$(mktemp -t tri-review.XXXXXX.patch)
+   git diff origin/<trunk>...HEAD > "$PATCH"
+   # or: git diff HEAD > "$PATCH" for uncommitted scope
    ```
+
+   Use a unique temp file (`mktemp`), not a fixed path — a fixed name
+   collides with a concurrent review and is world-predictable. Delete it
+   when the review is done.
 
 3. **Start Codex and Gemini in the background, in parallel** (each takes
    several minutes). Two separate Bash calls with `run_in_background: true`:
 
    ```bash
-   codex exec -s read-only review --base <trunk> -c model_reasoning_effort="high"
+   codex exec -s read-only review --base origin/<trunk> -c model_reasoning_effort="high"
    # or: codex exec -s read-only review --uncommitted -c model_reasoning_effort="high"
    ```
 
    ```bash
-   agy --model <newest-model-on-plan> --print-timeout 8m -p "You are a senior code reviewer. Read the file <PATCH_PATH> with read_file — it is a git diff. Review it for real bugs only (correctness, security, data loss), not style. You MAY read_file the repo files named in the diff headers for surrounding context, but do NOT search or explore beyond them and do NOT run commands. Output findings as one line each: file:line — issue — why it breaks. If none, output exactly: CLEAN"
+   agy --sandbox --model <newest-gemini-on-plan> --print-timeout 8m -p "You are a senior code reviewer. Read the file <PATCH_PATH> with read_file — it is a git diff. Review it for real bugs only (correctness, security, data loss), not style. You MAY read_file the repo files named in the diff headers for surrounding context, but do NOT search or explore beyond them and do NOT run commands. Output findings as one line each: file:line — issue — why it breaks. If none, output exactly: CLEAN"
    ```
 
-   If a sandbox blocks either CLI's network access, grant network to the
-   sandboxed run; never disable the sandbox for a review — a reviewer must
-   never touch the tree.
+   Always pass `-s read-only` (Codex) and `--sandbox` (Gemini) — a reviewer
+   must never touch the tree, and the diff under review is untrusted input:
+   a prompt-injected diff could otherwise steer an unsandboxed agent into
+   running commands. Prompt-level "do NOT run commands" text is a
+   constraint, not a boundary. If a sandbox blocks network access, grant
+   network to the sandboxed run; never disable the sandbox for a review.
 
 4. **While they run, invoke `/code-review` at high effort** on the same scope.
 
@@ -63,8 +75,8 @@ finding is real; disagreement tells the user exactly where to look manually.
    the finding plus your refutation evidence, asking it to CONCEDE or DEFEND
    with code citations:
    - Codex: `codex exec` (read-only).
-   - Gemini: `agy --model <model> -p "..."` (include the refutation inline;
-     reference the patch file again).
+   - Gemini: `agy --sandbox --model <model> -p "..."` (include the
+     refutation inline; reference the patch file again).
    Concede → drop silently. Defend → re-examine once; if you still disagree,
    report it as **[disputed]** with both positions and your recommendation —
    the user rules. One rebuttal round only (reviews are expensive; the diff,
@@ -88,14 +100,19 @@ finding is real; disagreement tells the user exactly where to look manually.
   them, do NOT run commands") — without it the agent wanders the repo and
   exceeds `--print-timeout` with no output.
 - Headless mode auto-denies any tool not allowlisted in
-  `~/.gemini/antigravity-cli/settings.json` → `permissions.allow`. Configure
-  a read-only set (read_file, grep_search, …). If a run dies with "required
-  the X permission", add the rule there — never use
+  `~/.gemini/antigravity-cli/settings.json` → `permissions.allow`. Keep that
+  allowlist READ-ONLY (read_file, grep_search, …) — headless mode
+  auto-approves whatever is allowlisted, so a write or terminal rule left
+  over from other work becomes an unattended grant here. Pair it with
+  `--sandbox` (defense in depth). If a run dies with "required the X
+  permission", add a read-only rule there — never use
   `--dangerously-skip-permissions`.
-- Pass `--model` explicitly and pick the newest generation your plan offers
-  (e.g. `gemini-3.6-flash-high`); a newer flash tier at high effort tends to
-  out-review an older pro tier. Note there is no Gemini 3.5 Pro — don't
-  guess model names.
+- Pass `--model` explicitly and pick the newest **Gemini** model your plan
+  offers (e.g. `gemini-3.6-flash-high`); a newer flash tier at high effort
+  tends to out-review an older pro tier. Note that `agy models` may also
+  list Claude and GPT-OSS models — don't pick those, or two of your three
+  "independent" reviewers share a lab and the agreement signal is void.
+  There is no Gemini 3.5 Pro — don't guess model names.
 - Auth error / "Please sign in" → tell the user to run `agy` in their own
   terminal and complete the Google login; do not attempt to re-auth headless
   (it requires an interactive OAuth code paste).
