@@ -1,8 +1,8 @@
-# dual-ai — two models, one codebase
+# dual-ai — two (or three) models, one codebase
 
-Two [Claude Code](https://claude.com/claude-code) skills that put **Claude and
-OpenAI's Codex CLI in an adversarial loop** on the same work, instead of
-trusting either model alone:
+[Claude Code](https://claude.com/claude-code) skills that put **Claude,
+OpenAI's Codex CLI — and optionally Google's Gemini — in an adversarial loop**
+on the same work, instead of trusting any one model alone:
 
 - **`/dual-plan`** — Claude drafts an implementation plan, Codex critiques it
   against the actual codebase (read-only), Claude adjudicates each point, and
@@ -16,6 +16,13 @@ trusting either model alone:
   (rejected ones get one rebuttal round); disputes are shown with both
   positions. Every finding is tagged `[both]`, `[claude]`, `[codex]`, or
   `[disputed]`.
+- **`/tri-review`** — same idea with a **third independent reviewer**:
+  Claude's `/code-review`, `codex exec review`, and Gemini (via Google's
+  Antigravity CLI, `agy`) all review the same diff in parallel. Findings are
+  ranked by cross-model agreement — all three > two > one — and single-model
+  findings are verified against the code before being reported. Tags:
+  `[all]`, `[claude+codex]`, `[claude+gemini]`, `[codex+gemini]`,
+  `[claude]`, `[codex]`, `[gemini]`, `[disputed]`.
 
 ## Why this exists
 
@@ -51,8 +58,11 @@ pre-triaged by confidence instead of being one long unweighted list.
 1. **Claude Code** (CLI, desktop, or IDE extension) — runs the skills.
 2. **OpenAI Codex CLI** — `codex` on your PATH, authenticated
    (`codex login` or via the Codex desktop app).
+3. **Google Antigravity CLI** (`agy`) — only for `/tri-review`; authenticated
+   with a Google plan login (run `agy` once interactively to sign in).
 
-Both are needed; the whole point is two independent vendors.
+The first two are needed; the whole point is independent vendors. The third
+adds a tie-breaker.
 
 ## Install
 
@@ -66,12 +76,12 @@ names, and the stale copy can shadow the auto-updating plugin.
 /plugin install dual-ai@dual-ai-skills
 ```
 
-Plugin-installed skills are namespaced: invoke them as `/dual-ai:dual-plan`
-and `/dual-ai:dual-review`. (If they don't show up immediately, restart
-Claude Code.)
+Plugin-installed skills are namespaced: invoke them as `/dual-ai:dual-plan`,
+`/dual-ai:dual-review`, and `/dual-ai:tri-review`. (If they don't show up
+immediately, restart Claude Code.)
 
-**Option B — plain copy** (skills appear unnamespaced as `/dual-plan` and
-`/dual-review`):
+**Option B — plain copy** (skills appear unnamespaced as `/dual-plan`,
+`/dual-review`, and `/tri-review`):
 
 ```bash
 git clone https://github.com/SameerKhan/dual-ai-skills
@@ -81,8 +91,9 @@ cp -r dual-ai-skills/plugins/dual-ai/skills/* ~/.claude/skills/
 
 (Or into a repo's `.claude/skills/` to share it with just that team/project.)
 
-Either way, you can also just say **"dual plan this feature"** or
-**"dual review this branch"** in Claude Code — no slash command needed.
+Either way, you can also just say **"dual plan this feature"**,
+**"dual review this branch"**, or **"tri review this branch"** in Claude
+Code — no slash command needed.
 
 ## Not on Claude Code? (Cursor, Antigravity, etc.)
 
@@ -112,6 +123,9 @@ Two options:
 - **Keep an `AGENTS.md` in your repos** (Codex reads it automatically). A
   copy of your CLAUDE.md works — both models should see the same ground
   rules.
+- **Gemini's `agy -p` does not read stdin.** Piping a diff in silently loses
+  it and yields a hollow "CLEAN". Write the diff to a file and name the
+  absolute path in the prompt.
 - macOS Codex desktop app: if you symlink `codex` out of
   `/Applications/Codex.app`, symlink its sibling `codex-code-mode-host` into
   the same directory too, or every run dies with

@@ -1,6 +1,6 @@
 {
   "name": "dual-ai-skills",
-  "description": "Two-model adversarial workflows for Claude Code: Claude + OpenAI Codex CLI as independent critics on the same plan or diff.",
+  "description": "Multi-model adversarial workflows for Claude Code: Claude + OpenAI Codex CLI (+ optionally Google Gemini) as independent critics on the same plan or diff.",
   "owner": {
     "name": "Sameer Ahmed Khan"
   },
@@ -8,7 +8,7 @@
     {
       "name": "dual-ai",
       "source": "./plugins/dual-ai",
-      "description": "Dual-model workflows for Claude Code: /dual-plan (Claude drafts, Codex critiques until convergence) and /dual-review (Claude + Codex review the same diff, merged into one adversarially-verified report)."
+      "description": "Multi-model workflows for Claude Code: /dual-plan (Claude drafts, Codex critiques until convergence), /dual-review (Claude + Codex review the same diff, merged into one adversarially-verified report), and /tri-review (Claude + Codex + Gemini on the same diff)."
     }
   ]
 }
