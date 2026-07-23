@@ -24,6 +24,12 @@ on the same work, instead of trusting any one model alone:
   Tags:
   `[all]`, `[claude+codex]`, `[claude+gemini]`, `[codex+gemini]`,
   `[claude]`, `[codex]`, `[gemini]`, `[disputed]`.
+- **`/tri-plan`** — `/dual-plan` with a **second independent critic**:
+  Claude drafts the plan, Codex and Gemini critique it **in parallel**, and
+  the revise loop runs until *both* sign off SOUND (same 3-round cap).
+  Points both critics raise independently are treated as near-certain;
+  single-critic points are verified against the code before the plan
+  changes. Closes with `/tri-review` on the finished diff.
 
 ## Why this exists
 
@@ -59,8 +65,9 @@ pre-triaged by confidence instead of being one long unweighted list.
 1. **Claude Code** (CLI, desktop, or IDE extension) — runs the skills.
 2. **OpenAI Codex CLI** — `codex` on your PATH, authenticated
    (`codex login` or via the Codex desktop app).
-3. **Google Antigravity CLI** (`agy`) — only for `/tri-review`; authenticated
-   with a Google plan login (run `agy` once interactively to sign in).
+3. **Google Antigravity CLI** (`agy`) — only for `/tri-review` and
+   `/tri-plan`; authenticated with a Google plan login (run `agy` once
+   interactively to sign in).
 
 The first two are needed; the whole point is independent vendors. The third
 adds a tie-breaker.
@@ -78,11 +85,11 @@ names, and the stale copy can shadow the auto-updating plugin.
 ```
 
 Plugin-installed skills are namespaced: invoke them as `/dual-ai:dual-plan`,
-`/dual-ai:dual-review`, and `/dual-ai:tri-review`. (If they don't show up
-immediately, restart Claude Code.)
+`/dual-ai:dual-review`, `/dual-ai:tri-plan`, and `/dual-ai:tri-review`. (If
+they don't show up immediately, restart Claude Code.)
 
 **Option B — plain copy** (skills appear unnamespaced as `/dual-plan`,
-`/dual-review`, and `/tri-review`):
+`/dual-review`, `/tri-plan`, and `/tri-review`):
 
 ```bash
 git clone https://github.com/SameerKhan/dual-ai-skills
@@ -93,8 +100,8 @@ cp -r dual-ai-skills/plugins/dual-ai/skills/* ~/.claude/skills/
 (Or into a repo's `.claude/skills/` to share it with just that team/project.)
 
 Either way, you can also just say **"dual plan this feature"**,
-**"dual review this branch"**, or **"tri review this branch"** in Claude
-Code — no slash command needed.
+**"tri plan this feature"**, **"dual review this branch"**, or
+**"tri review this branch"** in Claude Code — no slash command needed.
 
 ## Not on Claude Code? (Cursor, Antigravity, etc.)
 
